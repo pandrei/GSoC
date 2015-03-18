@@ -1,5 +1,5 @@
 
-# <p align="center"> <font size="32">Find and implement a better security model for Atom</font> </p>
+# Find and implement a better security model for Atom <br>
 
 # Background
 
