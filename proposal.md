@@ -140,14 +140,14 @@ I divided my whole proposed timeline in intervals of two weeks. <br> <br>
 
 # So, why me?
 * Because I'm goal-oriented, driven and no stranger to taking risks. 
-> took a kernel developer internship knowing just pointer arithmetics <br>
-> Got involved in a project I had literally zero knowledge about and put enough effort to achieve a functional final result. <br>
+&emsp;&emsp; took a kernel developer internship knowing just pointer arithmetics <br>
+&emsp;&emsp; Got involved in a project I had literally zero knowledge about and put enough effort to achieve a functional final result. <br>
 * Because I got a relevant background, in both directions
-> Low level knowledge from mentioned internships <br>
-> self-developed Node.js, javascript and web knowledge <br>
-> C/C++ as strongest language, experience developing C++ apps
+&emsp;&emsp; Low level knowledge from mentioned internships <br>
+&emsp;&emsp; self-developed Node.js, javascript and web knowledge <br>
+&emsp;&emsp; C/C++ as strongest language, experience developing C++ apps
 * Because I believe in Atom as a product
-> this is an important factor in my motivation and how much work I put into something.
+&emsp;&emsp; this is an important factor in my motivation and how much work I put into something.
 * For the love of octokittens?
  
 <img src=http://venturebeat.com/wp-content/uploads/2012/12/github-open-source.jpg img width = 35% img height = 35%>
