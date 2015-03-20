@@ -18,75 +18,152 @@
 </p>
 
 # Project Idea
+
+## Current situation
 <p align="justify">
-&emsp; There currently is no clear, obvious way of implementing  native-module security. As a result, the least I can achieve is a highly documented and detailed proof of concept of why it can't be done, or the issues I ran into, with fallback on JS security
+&emsp; Atom needs a better security model. Right now, an user is able to load a native module with malitious code which could potentially offer access to OS resources or other unintended behaviour. This might seem obvious, but I'm going to go through it anyway. The main <a href=https://github.com/atom/atom/issues/1763#issuecomment-82200875> issue  </a> isn't getting access to Atom internals, as it is open source and there's little gain in hacking an editor that's purposely made for hacking.  So, <i> no big deal for getting access in  Atom .</i><br>
+&emsp; My understanding is that the <i> hot </i> issue is gaining access to operating system priviledges(in example, root) through Atom. This, in my opinion, is a valid deterrent. Let's picture a case where I would use Atom to edit my /etc/sudoers. I would do 
 
-from  <a href=http://static.googleusercontent.com/media/research.google.com/ro//pubs/archive/34913.pdf>Native Client: A Sandbox for Portable, Untrusted x86 Native Code </a>
+> sudo atom
 
-> <p align ="justify"> 
- Native Client is ideal for application components requiring pure computation.<br> It is not appropriate for modules requiring process creation, direct file system access, <br> or  unrestricted access to the network 
- </p>
-
-My observation is that you can't  secure threads from one another, at least not without major restrictions. NaCl does this, but it limits functionality to 4 calls (read, write, exit and sigreturn, so no malloc).
-
-What I propose is to head the research in the following direction <br>
-<img src=http://goo.gl/6d85Sh> <br>
-<p align="justify"> While it's very difficult to implement security at thread level, at process level the operating system helps. So a module would be loaded in the following manner:
-
- load would spawn a new process(for the module) -> the main node process would freeze(until the module loads). -> main process would provide information via IPC.
- Looking at <a href=https://github.com/atom/atom/issues/1763#issuecomment-82200875> this issue</a> there is a debate about the filesystem security.
-  </p>
-  > If there's no access to 'fs', significant packages break.<br>
-  > If there is access to 'fs', all bets are off. <br>
-  
-<p align="justify">  
-  My (probably overenthusiastic, irresponsible) impression is that those two don't mutually exclude each other.
-  With the process-to-process communication idiom we could share (whitelisted) descriptors, this is known and
-  has <a href=http://stackoverflow.com/questions/2358684/can-i-share-a-file-descriptor-to-another-process-on-linux-or-are-they-local-to-t> been done</a>.  <br><br>
-  
-  Is it perfect? No, but it gives a decent benefit for both cases.
-  
-  The only downside I can think of is a somewhat performance decrease, but since you're not going to load packages <i> that</i> often, it seems reasonable to me.
-  
+With the atom process running in priviledged context, it's easy to see what could happen if malitious code would run inside a Node.js module.
 </p>
 
-###Project idea roadmap
+## What we need
 
-* investigate the possibility to load a module in a different process, in case of success begin implementation/design. <br><br>
-* <p align="justify"> investigate using NaCl to have this at thread level. More difficult, as described here <a href=https://www.cr0.org/paper/jt-ce-sid_linux.pdf>paper on linux sandboxes </a>, you need to have two "parts". A trusted, secure runtime part where you can run basically anything, and a part where you limit functionality to a bare minimum.  For our purpose, this implies Having a "secure loader" part which has direct access to resources, and an "unsecure" one which interracts with the module itself. <br> </p>
-* if all else fails, resort to <a href=https://github.com/gf3/sandbox>focus solely on the JavaScript layer and isolating pure JS packages </a>
+<br>We need a better security model!<br>
+&emsp; It would take the form of a capability to restrict or at least supervise a module's accesses to OS resources. At worst, we need to make sure that we prompt the user to confirm, whenever something <i> untrusted </i> is to be executed. <br> 
+&emsp; Aside of that, we also need to maintain the same functionality, without dumbing down or suffering 
+observable performance loss*
 
+> observable performance loss roughly means "you have to wait after the program to finish"
 
+<br>
+## Approach
+<br>
+<p align="justify"> We'll start by describing each possible idea I have found and it's liabilty, concluding with the best approach I have developed so far </p>
 
+### Native Client (NaCl)
 
+<br>
+<p align="justify"> Native client relies on the following phylosophy.<br><br></p>
 
+<img src=http://goo.gl/6d85Sh>
+<br> <br>
 
-First of all, this paper does not proppose a clear, obvious way of implementantion security using NaCl.
-It presents what I have found so far, how I intend to continue research and what actions will I take based on the mentioned research. The fallback option is a JavaScript layer and isolating pure JS packages in their own context.
-
-<a href=http://gf3.github.io/sandbox>This</a> looks like a good starting point! As well as <a href=https://code.google.com/p/setuid-sandbox> this</a>. 
-</p>
-
-References: <br>
-
-*  <a href=https://code.google.com/p/chromium/wiki/LinuxSandboxing> Linux Sandboxing in Chromium </a>
-
-# Project implementation & timeline
-<p align="justify">
-I believe it's quite obvious that while I do have some relevant background, you can clearly see that this project is a bit beyond my current level, and that's good, really! That's also why I apply for it!<br>
-
-Based on the above, it's difficult to propose a clear implementation, instead, I'll propose a general flow.
-
-If I discover a feasible way of implementing the security model, I'll tackle this in an "Agile" manner, sort of. Implement the easiest-to-implement priviledge restriction to get a hang of it, then prioritise the most important ones(i.e. fs access) first.
-Since I'll most likely use Atom for this GSoC project, my implementation would get a bonus alpha testing already, so when I push it back to your main repo, there's a <i> minimum guarantee that it works </i>
-
-Ideally, at least the first proposed research subject(using diff processes) would be completed during community bonding, coding period kicking off with either a plan for implementation(if research proves feasible) or with one less research direction. <br> <br>
-
-All in all, this is, imho, a research project, so it's not possible to propose a clear, set scope but rather adjust it on the go. What I can guarantee is that Atom will get a significant contribution out of it,it'll be either having a better idea of what can and cannot be done or a better security model.
-
-</p>
+####Benefits  
+<br>
 
 <p align="justify">
+&emsp; NaCl is one of the very few available means of achieving thread-level security. It offers security at thread level and obviously at native level. For Atom, it would mean that each module is loaded in it's own thread. Any code the malitious module will execute will break at most the respective thread, which the main node process can restart or stop. Moreover, it wouldn't have access to any other resources than the main node process decides to offer. <br>
+&emsp; Essentially, it sandboxes each thread, controlling communication and access between them via an implemented messaging interface(that relies on IPC). <br>
+</p>
+<br> <br>
+####Issues
+<br>
+
+<p align="justify">
+&emsp; In order to achieve what was described above, NaCl imposes major restrictions on threads. For example, it restricts thread access to four syscalls*, all of them being relatively harmless. In the case of chromium tabs, it makes sense. They don't have much to do with the operating system,browser handles whatever acctions necessasry.<br>
+&emsp; For Atom, on the other hand, my opinion is that this will impose major limitations, break a large number of packages and cause an overall unpleasant experience to package developers. <b>Overall, no-go.</b><br>
+&emsp; The other approach, would be to allow require() and native code through. While require() <i> could </i> be modeled to have some whitelisting, asking the user to prompt, on native code, there isn't too much to do.
+</p>
+
+* syscalls `read()`, `write()`, `exit()`, `sigreturn()`
+
+#### Conclusion
+<br>
+<p align="justify">
+&emsp; I have reached out to the Node community and what I learned is that the running node module  is not a process, you just run some code in a 'v8 context'. Each module in node is run in a v8 context, and node sets some context globals like `module` and `require`. If you need to allow `require` or native code it's not a viable choice. NaCl is an overall no-go because it's developed to sandbox applications(threads) with limited requirements and it has no mechanisms to limit access to what we seek. It's has binary behaviour. It either allows it or not.
+</p>
+
+### Using containers
+
+<br>
+<p align="justify"> This is the idea behind containers, in this specific case [Docker](https://www.docker.com/). They provide isolation, but through a very lightweight framework. </p>
+
+<br>
+<img src=http://blog.trifork.com/wp-content/uploads/2013/07/Screenshot_from_docker.io_about.png> <br><br>
+
+####benefits
+<br>
+
+<p align="justify">
+&emsp; Instead of running a file in node, you run a docker container which runs that file. Loading a module on each container limits that module's access to OS resources. Basically, it provides exactly what we were looking for.<br><br>
+&emsp; But what about performance loss and scalability, let's have a look:<br><br>
+
+<img src=http://image.slidesharecdn.com/kvmanddockerlxcbenchmarkingwithopenstack-140430063510-phpapp01/95/kvm-and-docker-lxc-benchmarking-with-openstack-50-638.jpg?cb=1399803932 width=70% height=70%>
+
+<img src=https://s3.amazonaws.com/media-p.slid.es/uploads/arashkaffamanesh/images/674171/benchmark_docker_kvm_memory.png width=70% height=70%><br><br>
+
+<p align="justify"> All in all, it's not bad, considering Atom is unlikely to load thousands or tens of thousands of modules. As a personal experience, during my internship at Freescale, we managed to get about 1000 running on a 2. something ghz CPU and 4 GB RAM memory. <br></p>
+On short, it achieves what we needed at a reasonable tradeoff.
+</p>
+
+####Issues
+<br>
+
+<p align="justify">
+&emsp; Docker(in fact, LXC containers) were not built for isolation. <i> LXC containers do not fully contain.</i> I've done quite a lot of research on this subject and what I found out is that the opinions are divided.<br>
+&emsp; LXC containers are a fairly mature technology and there's certainly effort in the direction to fix this. There are plenty articles like <a href=https://blog.docker.com/2013/08/containers-docker-how-secure-are-they> this one </a>  which advocate them as being <i> quite secure </i>.<br>
+&emsp; On the other hand, there is <a href=http://linux-audit.com/docker-security-best-practices-for-your-vessel-and-containers> this article</a> that's quite recent and well explained which showcases Docker issues.
+</p>
+
+####Conclusion
+<br>
+
+<p align="justify">
+&emsp; Ultimately, the decision on taking this path or not belongs to the Atom community or development lead. What I have described above is a detailed, bigger picture. <br>
+&emsp; From what I have read on that issue, this has already been done at cloud-level and I could implement/deliver Atom packages with Docker in form of bundles (.deb, .rpm) or some other agreed upon formats.<br>
+Here is an approximative docker receipe <br>
+</p>
+```
+RUN apk-install nodejs
+
+RUN mkdir -p /usr/src/app
+WORKDIR /usr/src/app
+
+COPY . /usr/src/app/
+RUN apk-install -t build-deps build-base python \
+  && npm install \
+  && npm run build \
+  && npm cache clean \
+  && apk del --purge build-deps \
+  && apk del --purge build-base
+
+CMD ["npm", "start"]
+```
+
+* Kudos to Node.js community for supplying the docker receipe! I'm familiar with LXC but have never used docker. <br>
+
+<p align="justify">
+In conclusion, it's up to you guys to decide if this approach is <i> secure enough </i> and if it's worth investing time in this direction. <br>
+</p>
+
+### isolating pure JS packages in their own context 
+<br>
+
+<p align="justify"> 
+&emsp; The last and probably safest approach woulb be to focus solely on the JavaScript layer and isolating pure JS packages in their own context. Since I debunked the NaCl approach above, it's safe to say that this idea doesn't require NaCl, involving just techniques from Secure ECMAScript. 
+</p>
+* This is something that I plan to implement even if we go for the Docker approach, but probably to a lesser completion degree.
+
+####benefits
+<br>
+
+<p align="justify">
+&emsp; It's the safest approach meaning that a course of action can be identified and proceed upon. I propose to use ECMASCript 6, which is scheduled to be released in June 2015(about the same time as coding begins).<br>
+&emsp; In it, I found support for <a href=https://github.com/lukehoban/es6features#module-loaders> secure module loaders</a> with which new loaders can be constructed to evaluate and load code in isolated or constrained contexts. <br>. There are plenty <a href=https://github.com/ddrcode/node-secure>resources</a> on how to go about it in ECMAScript 5 as well. <br>
+</p>
+
+####Issues
+<br>
+
+<p align="justify">
+&emsp; I'm not <i> that </i> familiar with JS. It will probably take some time of fiddling around, asking stupid questions until I get it right. I have a decent understanding of JS, but not that much of it's internals. I expect it not to be an issue, but it's something that I have to address and it will take time.
+
+&emsp; I expect that attack vectors such as buffer overflows would still be possible. Another issue is a lack of a detailed plan from Atom community, as to what and how to implement based on ECMAScript. I would also take care of that(during the community bonding) as part of GSoC project. <br>
+</p>
+
 
 Note: by research I <i>don't mean reading stuff and storytelling</i>, I mean providing blog posts(they'll be on andreipopescu.net, I'll set up github pages with Jekyll on my domain) but rather docummented articles, with
 code snippets as proof for why or why not that happens. I believe this approach makes them easier to discuss, read and gives a better exposure. I'm really open to investigating idea, provided there's some basis behind them.
@@ -103,18 +180,24 @@ I will be employed until 1st of June, working a 40 hour shift so my time availab
 
 I divided my whole proposed timeline in intervals of two weeks. <br> <br>
 
-* 27 April - 11st May - research on atom module loader, community discussions mixed with research about process spawn technique <br><br>
-* 11st May - 25th May - further research on process spawn security model,best case - conclusion reached <br><br>
-* 25th May - 8th June - last part of research regarding proces spawn security model, conclusion reached(mandatory) <br><br>
-* 8th June - 22nd June - research on loading modules using NaCl <br><br>
-* 22nd June - 6th July - finishing up midterm eval submission, getting to a conclusion on how feasible NaCl really is. <br><br>
-* 6th July -  20th July - Provide an implementation design(based on the research above) reiterrate it a sufficient number of versions until community agrees. Provide enough arguments backed up by technology, with practical basis for the Atom community to be able to decide on a course of action and begin implementation(mid second week) <br><br>
-* 20th July - 3rd August - Implementation of the respectively decided approach <br><br>
-* 3rd August - 15th August - finishing implementation, code cleanup, merging upstream. <br><br>
+* 27 April - 11st May - research on atom module loader,establish the direction forward, based on the proposed plan, research JS internals <br><br>
+* 11st May - 25th May - further research on given direction, putting together the ECMAScript specification<br><br>
+* 25th May - 8th June - finishing ECMAscript specification, have a clear, detailed decision on how and what to implement <br><br>
+* 8th June - 22nd June - either research on Docker or ECMASCript techniques (tests various implementations and packaging) <br><br>
+* 22nd June - 6th July - finishing up midterm eval submission, either finishing Docker implementation or having a countable number of ECMASecurity type security features implemented <br><br>
+* 6th July -  20th July - Either start working on Docker packaging or continue working on pure JS security features <br><br>
+* 20th July - 3rd August - finishing JS security features, brushing up code <br><br>
+* 3rd August - 15th August - merging upstream, doing functional testing <br><br>
 * 15th August - 21st August - fixing aditional issues, writing final report <br><br>
 
-
-
+#### Important Note
+<br>
+<p align="justify"> Even if in Timeline the testing, brushing up and merging are listed at the end, that's not the effective way it will happen. They're listed that way as I had to account for the given time. Each feature or fix that I add will go through the following flow <br>
+</p>
+```
+implemented -> (functional and unit) tested locally -> pull request to main repo -> refine until accepted -> fix any broken issues into main repo, development branch. 
+```
+<br><br>
 
 # Previous experience
 
