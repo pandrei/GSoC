@@ -43,6 +43,53 @@ observable performance loss*
 <br>
 <p align="justify"> We'll start by describing each possible idea I have found and it's liabilty, concluding with the best approach I have developed so far </p>
 
+### Isolating pure JS packages in their own context 
+<br>
+
+<p align="justify"> 
+&emsp;   The main plan of attack regarding Atom securit model involves using security features/constructs similar to those used in ECMAScript. While the main goal is, as stated above, isolating packages in their own context, it's difficult to outline an exact plan on how to do it.<br>
+&emsp;   I'm not familiar with Atom internals, and this is something I plan to take care of during community bonding period(basically, when I'm not supposed to write code) but since atom uses Node.js I expect it's package loading mechanism not to be a much different beast than <a href=http://fredkschott.com/post/2014/06/require-and-the-module-system>loading node modules with require </a>.<br><br>
+</p>
+
+#### General techniques I intend to use
+<br>
+
+<p align="justify"> 
+Now, some might be already there, some might not be applicable but I will list some general techniques used in ECMAScript
+</p>
+
+* Object as closures
+
+  The idea behind it is to implement a tamper-proof record of lexical closures that encapsulate state. The object is thus able to defend itself from unwanted changes. <br> <br>
+  
+* Revocable function Forwarder
+
+  Mechanism to limit access (in a time frame) for a given reference. This is possible by replacing the default refference with a function forwarder(that's "given" permanently) but which's target can be altered(set to NULL). By setting the forwarder's target to NULL we revoke access to the given target.
+
+####benefits
+<br>
+
+<p align="justify">
+&emsp; It's the safest approach meaning that a course of action can be identified and proceed upon. I propose to use ECMASCript 6, which is scheduled to be released in June 2015(about the same time as coding begins).<br>
+&emsp; In it, I found support for <a href=https://github.com/lukehoban/es6features#module-loaders> secure module loaders</a> with which new loaders can be constructed to evaluate and load code in isolated or constrained contexts. <br>. There are plenty <a href=https://github.com/ddrcode/node-secure>resources</a> on how to go about it in ECMAScript 5 as well. <br>
+</p>
+
+####Issues
+<br>
+
+<p align="justify">
+&emsp; I'm not <i> that </i> familiar with JS. It will probably take some time of fiddling around, asking stupid questions until I get it right. I have a decent understanding of JS, but not that much of it's internals. I expect it not to be an issue, but it's something that I have to address and it will take time.
+
+&emsp; I expect that attack vectors such as buffer overflows would still be possible. Another issue is a lack of a detailed plan from Atom community, as to what and how to implement based on ECMAScript. I would also take care of that(during the community bonding) as part of GSoC project. <br>
+</p>
+
+
+Note: by research I <i>don't mean reading stuff and storytelling</i>, I mean providing blog posts(they'll be on andreipopescu.net, I'll set up github pages with Jekyll on my domain) but rather docummented articles, with
+code snippets as proof for why or why not that happens. I believe this approach makes them easier to discuss, read and gives a better exposure. I'm really open to investigating idea, provided there's some basis behind them.
+</p>
+
+
+
 ### Native Client (NaCl)
 
 <br>
@@ -137,36 +184,6 @@ CMD ["npm", "start"]
 
 <p align="justify">
 In conclusion, it's up to you guys to decide if this approach is <i> secure enough </i> and if it's worth investing time in this direction. <br>
-</p>
-
-### isolating pure JS packages in their own context 
-<br>
-
-<p align="justify"> 
-&emsp; The last and probably safest approach woulb be to focus solely on the JavaScript layer and isolating pure JS packages in their own context. Since I debunked the NaCl approach above, it's safe to say that this idea doesn't require NaCl, involving just techniques from Secure ECMAScript. 
-</p>
-* This is something that I plan to implement even if we go for the Docker approach, but probably to a lesser completion degree.
-
-####benefits
-<br>
-
-<p align="justify">
-&emsp; It's the safest approach meaning that a course of action can be identified and proceed upon. I propose to use ECMASCript 6, which is scheduled to be released in June 2015(about the same time as coding begins).<br>
-&emsp; In it, I found support for <a href=https://github.com/lukehoban/es6features#module-loaders> secure module loaders</a> with which new loaders can be constructed to evaluate and load code in isolated or constrained contexts. <br>. There are plenty <a href=https://github.com/ddrcode/node-secure>resources</a> on how to go about it in ECMAScript 5 as well. <br>
-</p>
-
-####Issues
-<br>
-
-<p align="justify">
-&emsp; I'm not <i> that </i> familiar with JS. It will probably take some time of fiddling around, asking stupid questions until I get it right. I have a decent understanding of JS, but not that much of it's internals. I expect it not to be an issue, but it's something that I have to address and it will take time.
-
-&emsp; I expect that attack vectors such as buffer overflows would still be possible. Another issue is a lack of a detailed plan from Atom community, as to what and how to implement based on ECMAScript. I would also take care of that(during the community bonding) as part of GSoC project. <br>
-</p>
-
-
-Note: by research I <i>don't mean reading stuff and storytelling</i>, I mean providing blog posts(they'll be on andreipopescu.net, I'll set up github pages with Jekyll on my domain) but rather docummented articles, with
-code snippets as proof for why or why not that happens. I believe this approach makes them easier to discuss, read and gives a better exposure. I'm really open to investigating idea, provided there's some basis behind them.
 </p>
 
 ###Timeline
