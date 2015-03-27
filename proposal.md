@@ -7,7 +7,7 @@
   * E-mail&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;    -  popescu.andrei1991@gmail.com
   * Phone &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -  +40 0728 944 811
   * Studies completed &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -  Bsc. in Computer Science at Polytechnic University Bucharest
-  * Studies in progress &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;  -  Msc. in Computer SCience At VU Amsterdam, starting this fall
+  * Studies in progress &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;  -  Msc. in Computer Science At VU Amsterdam, starting this fall
   
   <p align="justify">
 &emsp; Hello! I'm Andrei, I'm a 24 year old student from Romania, about to move to Netherlands. I'm passionate about technology in general, but specially about software! I picked up programming at 7 and since then I haven't really let it go. <br> <br>
@@ -36,19 +36,21 @@ With the atom process running in priviledged context, it's easy to see what coul
 &emsp; Aside of that, we also need to maintain the same functionality, without dumbing down or suffering 
 observable performance loss*
 
-> observable performance loss roughly means "you have to wait after the program to finish"
+> observable performance loss roughly means "you have to wait for the program to finish"
 
 <br>
 ## Approach
 <br>
-<p align="justify"> We'll start by describing each possible idea I have found and it's liabilty, concluding with the best approach I have developed so far </p>
+<p align="justify"> The project will kick off with efford directing mostly towards isolating pure JS packages in their own context, other alternatives being researched concurently, but with less priority. </p>
 
 ### Isolating pure JS packages in their own context 
 <br>
 
 <p align="justify"> 
+
+&emsp;    Basically, in non-strict javascript code, there are many ways to get access to the global object (window in browsers), making true isolation a very hard problem. Caja does some iframing trickery to patch this. <br>
 &emsp;   The main plan of attack regarding Atom securit model involves using security features/constructs similar to those used in ECMAScript. While the main goal is, as stated above, isolating packages in their own context, it's difficult to outline an exact plan on how to do it.<br>
-&emsp;   I'm not familiar with Atom internals, and this is something I plan to take care of during community bonding period(basically, when I'm not supposed to write code) but since atom uses Node.js I expect it's package loading mechanism not to be a much different beast than <a href=http://fredkschott.com/post/2014/06/require-and-the-module-system>loading node modules with require </a>.<br><br>
+&emsp;   I'm not familiar with Atom internals and neither with Caja, and this is something I plan to take care of during community bonding period(basically, when I'm not supposed to write code) but since atom uses Node.js I expect it's package loading mechanism not to be a much different beast than <a href=http://fredkschott.com/post/2014/06/require-and-the-module-system>loading node modules with require </a>.<br><br>
 </p>
 
 #### General techniques I intend to use
@@ -58,45 +60,65 @@ observable performance loss*
 Now, some might be already there, some might not be applicable but I will list some general techniques used in ECMAScript
 </p>
 
-* Object as closures
+* Objects as closures
 
-  The idea behind it is to implement a tamper-proof record of lexical closures that encapsulate state. The object is thus able to defend itself from unwanted changes. <br> <br>
-  
+<p align="justify">  The idea behind it is to implement a tamper-proof record of lexical closures that encapsulate state. The object is thus able to defend itself from unwanted changes. <br> <br>
+</p>  
 * Revocable function Forwarder
 
-  Mechanism to limit access (in a time frame) for a given reference. This is possible by replacing the default refference with a function forwarder(that's "given" permanently) but which's target can be altered(set to NULL). By setting the forwarder's target to NULL we revoke access to the given target.
+<p align="justify"> 
+  Mechanism for temporal attenuation on a given reference. This is possible by replacing the default refference with a function forwarder(that's "given" permanently) but which's target can be altered(set to NULL). By setting the forwarder's target to NULL we revoke access to the given target. <br>
+</p>
+* Membranes
 
-####benefits
-<br>
+<p align="justify"> 
+ Membranes are the generalised application of Revocable function Forwarder, it cuts out all references.<br>
+</p>
+
+* Other access atenuators
 
 <p align="justify">
-&emsp; It's the safest approach meaning that a course of action can be identified and proceed upon. I propose to use ECMASCript 6, which is scheduled to be released in June 2015(about the same time as coding begins).<br>
-&emsp; In it, I found support for <a href=https://github.com/lukehoban/es6features#module-loaders> secure module loaders</a> with which new loaders can be constructed to evaluate and load code in isolated or constrained contexts. <br>. There are plenty <a href=https://github.com/ddrcode/node-secure>resources</a> on how to go about it in ECMAScript 5 as well. <br>
+ Attenuator to make a file read-only by passing just it's content and size, instead of passing a pointer to the file structure. This would prevent mailicious writing the file.<br>
+ Replaced "eval", no powerful references by default, each object can go down on the relationship tree(and back up to it's level) but never up<br>
 </p>
 
-####Issues
-<br>
+* Membrane eval
 
 <p align="justify">
-&emsp; I'm not <i> that </i> familiar with JS. It will probably take some time of fiddling around, asking stupid questions until I get it right. I have a decent understanding of JS, but not that much of it's internals. I expect it not to be an issue, but it's something that I have to address and it will take time.
+ This looks exactly like what we'd need to do in order to isolate a js package in it's own context. The parent creates a compartment that it can revoke at <i>any</i> point. It's useful to point out that membrane not only cuts out all the external references to this object but(more as a side effect) doesn't allow it to reside in the memory either. Once the references are removed, garbage collector is called <br>
 
-&emsp; I expect that attack vectors such as buffer overflows would still be possible. Another issue is a lack of a detailed plan from Atom community, as to what and how to implement based on ECMAScript. I would also take care of that(during the community bonding) as part of GSoC project. <br>
+I found support for <a href=https://github.com/lukehoban/es6features#module-loaders> secure module loaders</a> with which new loaders can be constructed to evaluate and load code in isolated or constrained contexts. <br>. There are plenty <a href=https://github.com/ddrcode/node-secure>resources</a> on how to go about it in ECMAScript 5 as well. <a href=https://code.google.com/p/google-caja>Google Caja</a> also does this and it remains to be seen if it can be used. I also found <a href=https://www.npmjs.com/package/google-caja>this npm package</a> that has the google-caja sanitizer<br>
 </p>
 
-
-Note: by research I <i>don't mean reading stuff and storytelling</i>, I mean providing blog posts(they'll be on andreipopescu.net, I'll set up github pages with Jekyll on my domain) but rather docummented articles, with
-code snippets as proof for why or why not that happens. I believe this approach makes them easier to discuss, read and gives a better exposure. I'm really open to investigating idea, provided there's some basis behind them.
+<p align="justify">
+&emsp; I'm not <i> that </i> familiar with Caja and Atom internals, but I believe the community bonding period will be just enough, as I have researched, learned and understood everything in this proposal with virtually zero previous knowledge, in a much smaller time frame.
 </p>
+
+#### Applications of mentioned techniques
+<br><br>
+Attenuate access to `fs`.  Limiting access to `fs` is a reasonable approach. A module should not be able to read(or more importantly write) a file that it's not supposed to. So, instead of offering a reference to it through an attenuator.  <br> 
+
+Supposing we load an erroneous module, with membrane we could cut all references to it and it will be eventually cleared by the gargabe collector <br>
+
+These are simple/common cases that could be valid, the general idea is, however, to go for the minimum rights principle. To let a module use just enough Atom API to work, but not more. <br>
+
+
+
+
+## Overview of other researchable alternatives
 
 
 
 ### Native Client (NaCl)
 
 <br>
-<p align="justify"> Native client relies on the following phylosophy.<br><br></p>
+<p align="justify"> Native client relies either on the following phylosophy(processes)<br><br></p>
 
 <img src=http://goo.gl/6d85Sh>
 <br> <br>
+
+or on this <a href=http://static.googleusercontent.com/media/research.google.com/ro//pubs/archive/34913.pdf> paper  </a>.  The paper describes how sandboxing a thread would happen, which is similar to our goal.However, it does this with the tradeoff of limiting thread capabilies heavily( to four).
+</p>
 
 ####Benefits  
 <br>
@@ -110,6 +132,7 @@ code snippets as proof for why or why not that happens. I believe this approach 
 <br>
 
 <p align="justify">
+
 &emsp; In order to achieve what was described above, NaCl imposes major restrictions on threads. For example, it restricts thread access to four syscalls*, all of them being relatively harmless. In the case of chromium tabs, it makes sense. They don't have much to do with the operating system,browser handles whatever acctions necessasry.<br>
 &emsp; For Atom, on the other hand, my opinion is that this will impose major limitations, break a large number of packages and cause an overall unpleasant experience to package developers. <b>Overall, no-go.</b><br>
 &emsp; The other approach, would be to allow require() and native code through. While require() <i> could </i> be modeled to have some whitelisting, asking the user to prompt, on native code, there isn't too much to do.
@@ -121,6 +144,8 @@ code snippets as proof for why or why not that happens. I believe this approach 
 <br>
 <p align="justify">
 &emsp; I have reached out to the Node community and what I learned is that the running node module  is not a process, you just run some code in a 'v8 context'. Each module in node is run in a v8 context, and node sets some context globals like `module` and `require`. If you need to allow `require` or native code it's not a viable choice. NaCl is an overall no-go because it's developed to sandbox applications(threads) with limited requirements and it has no mechanisms to limit access to what we seek. It's has binary behaviour. It either allows it or not.
+
+&emsp; To put it simply, the Chrome-like sandboxing(each process being sandboxed sepparetely) is not suitable for Atom. The other alternative, sandboxing threads, isn't straight-forward at all, it might not even be possible as you need to allow stuff like "require". Require can be indeed rewritten to a more secure model, but, imo, that can only happen at JS context level, not at native code level.
 </p>
 
 ### Using containers
@@ -145,6 +170,10 @@ code snippets as proof for why or why not that happens. I believe this approach 
 <p align="justify"> All in all, it's not bad, considering Atom is unlikely to load thousands or tens of thousands of modules. As a personal experience, during my internship at Freescale, we managed to get about 1000 running on a 2. something ghz CPU and 4 GB RAM memory. <br></p>
 On short, it achieves what we needed at a reasonable tradeoff.
 </p>
+
+> Note - Docker does claim that their containers are portable, but since they rely on lxc, which is linux
+specific I imagine there's a significant overhead on other platforms(windows/mac).
+
 
 ####Issues
 <br>
@@ -179,11 +208,13 @@ RUN apk-install -t build-deps build-base python \
 
 CMD ["npm", "start"]
 ```
+<br>
 
 * Kudos to Node.js community for supplying the docker receipe! I'm familiar with LXC but have never used docker. <br>
 
 <p align="justify">
-In conclusion, it's up to you guys to decide if this approach is <i> secure enough </i> and if it's worth investing time in this direction. <br>
+Note: by research I <i>don't mean reading stuff and storytelling</i>, I mean providing blog posts(they'll be on andreipopescu.net, I'll set up github pages with Jekyll on my domain) but rather docummented articles, with
+code snippets as proof for why or why not that happens. I believe this approach makes them easier to discuss, read and gives a better exposure. I'm really open to investigating idea, provided there's some basis behind them.
 </p>
 
 ###Timeline
@@ -197,15 +228,25 @@ I will be employed until 1st of June, working a 40 hour shift so my time availab
 
 I divided my whole proposed timeline in intervals of two weeks. <br> <br>
 
-* 27 April - 11st May - research on atom module loader,establish the direction forward, based on the proposed plan, research JS internals <br><br>
-* 11st May - 25th May - further research on given direction, putting together the ECMAScript specification<br><br>
-* 25th May - 8th June - finishing ECMAscript specification, have a clear, detailed decision on how and what to implement <br><br>
-* 8th June - 22nd June - either research on Docker or ECMASCript techniques (tests various implementations and packaging) <br><br>
-* 22nd June - 6th July - finishing up midterm eval submission, either finishing Docker implementation or having a countable number of ECMASecurity type security features implemented <br><br>
-* 6th July -  20th July - Either start working on Docker packaging or continue working on pure JS security features <br><br>
-* 20th July - 3rd August - finishing JS security features, brushing up code <br><br>
-* 3rd August - 15th August - merging upstream, doing functional testing <br><br>
-* 15th August - 21st August - fixing aditional issues, writing final report <br><br>
+* 27 April - 11st May - research on atom module loader,establish security liablities, based on the proposed plan, research JS internals <br><br>
+* 11st May - 25th May - further research on security issues, settling on proposed security fixes(tuning my proposed security plan until it's accepted by the Atom community)<br><br>
+* 25th May - 8th June - have a complete clear security model imrpovement plan and begin implementation <br><br>
+* 8th June - 22nd June - work on security improvements; research on NaCl techniques (tests various implementations and packaging) <br><br>
+* 22nd June - 6th July - finishing up midterm eval submission, concluding on Nacl implementation possibility, having a countable number of security features implemented in Aton<br><br>
+* 6th July -  20th July - Working on module isolation, upstreaming previous work, fixing any issues caused by security features that were added, functionality test work-in-progress <br><br>
+* 20th July - 3rd August - research on Docker implementation possibility and coming up with a documented conclusion, further work on security model <br><br>
+* 3rd August - 15th August - finishing JS security features, brushing up code <br><br>
+* 15th August - 21st August - merging upstream, doing functional testing , fixing aditional issues, writing final report <br><br>
+
+
+### Deliverables
+
+* Accountable number of security features(i.e isolate fs, isolate buffer API)
+
+* Paper on securing Atom modules with NaCl, with relevant conclusion, backed by facts.
+
+* Paper on Docker implementation situation, with relevant conclusion, backed by facts.
+
 
 #### Important Note
 <br>
