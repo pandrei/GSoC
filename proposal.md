@@ -41,7 +41,7 @@ observable performance loss*
 <br>
 ## Approach
 <br>
-<p align="justify"> The project will kick off with efford directing mostly towards isolating pure JS packages in their own context, other alternatives being researched concurently, but with less priority. </p>
+<p align="justify"> The project will kick off with effort directing mostly towards isolating pure JS packages in their own context, other alternatives being researched concurently, but with less priority. </p>
 
 ### Isolating pure JS packages in their own context 
 <br>
@@ -96,7 +96,7 @@ I found support for <a href=https://github.com/lukehoban/es6features#module-load
 
 #### Applications of mentioned techniques
 <br><br>
-Attenuate access to `fs`.  Limiting access to `fs` is a reasonable approach. A module should not be able to read(or more importantly write) a file that it's not supposed to. So, instead of offering a reference to it through an attenuator.  <br> 
+Attenuate access to `fs`.  Limiting access to `fs` is a reasonable approach. A module should not be able to read(or more importantly write) a file that it's not supposed to. So, instead of offering a reference to it, it will offer a refference through an attenuator.  <br> 
 
 Supposing we load an erroneous module, with membrane we could cut all references to it and it will be eventually cleared by the gargabe collector <br>
 
