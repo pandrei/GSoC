@@ -9,6 +9,6 @@ Tried searching for the error, found some similar issues in other tools, but not
 
 Since I was stuck with this, I tried to make use of my time and read [Language-Independent Sandboxing of Just-In-Time Compilation and Self-Modifying Code](http://static.googleusercontent.com/media/research.google.com/ro//pubs/archive/37204.pdf) which, imho, proves that what we are looking for is not only possible, but already done.
 
-(This V8 port)[https://github.com/p-march/v8-taint] is <i><not/i> related to NaCl but interesting nonetheless, could prove a significant optimization even on how things are right now.
+[This V8 port](https://github.com/p-march/v8-taint) is <i><not/i> related to NaCl but interesting nonetheless, could prove a significant optimization even on how things are right now.
 
-Moreover, (here)[https://github.com/p-march/nacl-v8] we have a V8 port to NaCl that does have JIT via NaCl calls. Looking forward to what this unfolds to!
+Moreover, [here](https://github.com/p-march/nacl-v8) we have a V8 port to NaCl that does have JIT via NaCl calls. Looking forward to what this unfolds to!
